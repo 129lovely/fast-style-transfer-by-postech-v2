@@ -1,0 +1,4 @@
+{
+    "git.ignoreLimitWarning": true,
+    "python.pythonPath": "/home/piai/anaconda3/envs/tensorflow-fast-style-transfer/bin/python"
+}
