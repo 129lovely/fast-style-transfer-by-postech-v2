@@ -41,7 +41,7 @@ def load_checkpoint(model_path, sess):
     try:
         saver.restore(sess, model_path)
         print("load checkpoint: ", model_path)
-        # style = cv2.imread(model_path)
+        style = cv2.imread(model_path)
         return True
     except:
         print("checkpoint %s not loaded correctly" % model_path)
@@ -157,21 +157,22 @@ def main(device_id, width, disp_width, disp_source, horizontal, num_sec, pr_widt
                 cv2.imshow("frame", output)
 
             # additional functions
-            key_ = cv2.waitKey(1)
+            key_ = cv2.waitKeyEx(1)
+            print(key_)
             # exit
             if key_ == 27:
                 break
             # 화면 멈춤 stop
-            elif key_ == ord("s"):
+            elif key_ == 32:  # spacebar
                 while True:
-                    key2 = cv2.waitKey(1)
+                    key2 = cv2.waitKeyEx(1)
                     cv2.imshow("frame", full_img)
 
-                    if key2 == ord("s"):
+                    if key2 == 32:
                         break
 
                     # stop before
-                    elif key2 == ord("b"):
+                    elif key2 == 65361:  # left arrow
                         idx_model = (idx_model + len(models) - 1) % len(models)
                         # print("load %d / %d : %s " % (idx_model, len(models), models[idx_model]))
                         load_checkpoint(models[idx_model]["path"], sess)
@@ -186,7 +187,7 @@ def main(device_id, width, disp_width, disp_source, horizontal, num_sec, pr_widt
                         cv2.imshow("frame", full_img)
 
                     # stop after
-                    elif key2 == ord("a"):
+                    elif key2 == 65363:  # right arrow
                         idx_model = (idx_model + 1) % len(models)
                         # print("load %d / %d : %s " % (idx_model, len(models), models[idx_model]))
                         load_checkpoint(models[idx_model]["path"], sess)
@@ -201,7 +202,7 @@ def main(device_id, width, disp_width, disp_source, horizontal, num_sec, pr_widt
                         cv2.imshow("frame", full_img)
                     # stop print
 
-                    elif key2 == ord("p"):
+                    elif key2 == 13:  # enter
                         # resizing
                         img = cv2.resize(output, (5120, 3840))
                         cv2.imwrite("./print" + "/" "print.png", img)
@@ -228,13 +229,6 @@ def main(device_id, width, disp_width, disp_source, horizontal, num_sec, pr_widt
                         # count+=1
                         os.system("lpr ./print/print.png")
 
-            # 다음 테마로 가기 after
-            elif key_ == ord("a"):
-                idx_model = (idx_model + 1) % len(models)
-                # print("load %d / %d : %s " % (idx_model, len(models), models[idx_model]))
-                load_checkpoint(models[idx_model]["path"], sess)
-                style = cv2.imread(models[idx_model]["img"])
-
             # 해당 화면의 결과 캡처 및 저장 capture
             elif key_ == ord("c"):
                 cv2.imwrite("./capture" + "/" + "./capture_%s.png" % nm, output)
@@ -242,14 +236,14 @@ def main(device_id, width, disp_width, disp_source, horizontal, num_sec, pr_widt
                 nm += 1
 
             # 이전 테마로 되돌아가기 before
-            elif key_ == ord("b"):
+            elif key_ == 65361:
                 idx_model = (idx_model + len(models) - 1) % len(models)
                 # print("load %d / %d : %s " % (idx_model, len(models), models[idx_model]))
                 load_checkpoint(models[idx_model]["path"], sess)
                 style = cv2.imread(models[idx_model]["img"])
 
             # 다음 테마로 가기 after
-            elif key_ == ord("a"):
+            elif key_ == 65363:
                 idx_model = (idx_model + 1) % len(models)
                 # print("load %d / %d : %s " % (idx_model, len(models), models[idx_model]))
                 load_checkpoint(models[idx_model]["path"], sess)
