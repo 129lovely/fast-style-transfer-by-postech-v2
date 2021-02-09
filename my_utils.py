@@ -48,8 +48,6 @@ class Theme:
         output = self.sess.run(self.preds, feed_dict={self.x: frame})
         output = output[:, :, [2, 1, 0]].reshape(self.img_shape)
         output = np.clip(output, 0.0, 255.0).astype(np.uint8)
-        print((frame.shape[0], frame.shape[1]))
-        print(type(frame.shape))
         output = cv2.resize(output, (frame.shape[1], frame.shape[0]))
         return output
 
