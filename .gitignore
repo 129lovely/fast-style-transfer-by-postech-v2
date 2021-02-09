@@ -1,4 +1,5 @@
 models/
+model_*/
 pre_trained_model/
 __pycache__/
 train2014/
