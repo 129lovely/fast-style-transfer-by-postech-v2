@@ -29,10 +29,13 @@ def get_camera_shape(cam):
         return cam.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH), cam.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT)
 
 
+### TODO: read model info from .csv file
+### TODO: just input the artist name, then make path string automatically
 models = [
     {"path": "models/model_gohg/final.ckpt", "img": "style/gohg.jpg", "artist": "gohg",},
     {"path": "models/model_unknown02/final.ckpt", "img": "style/unknown02.jpg", "artist": "unknown",},
     {"path": "models/model_wood/final.ckpt", "img": "style/wood.jpg", "artist": "wood",},
+    {"path": "models/model_agar/final.ckpt", "img": "style/agar.jpg", "artist": "agar",},
 ]
 
 opts = {
@@ -48,7 +51,7 @@ opts = {
 # config font
 # fontpath = "/usr/share/fonts/truetype/nanum/NanumBrush.ttf"  # brush
 fontpath = "/usr/share/fonts/truetype/nanum/NanumPen.ttf"  # pen
-font = ImageFont.truetype(font=fontpath, size=200)
+font = ImageFont.truetype(font=fontpath, size=250)
 ###################################################################
 
 # create and config tkinter instance
@@ -103,7 +106,7 @@ def video_stop():
         btn_print["state"] = tk.DISABLED
         btn_save["state"] = tk.DISABLED
     else:
-        btn_print["state"] = tk.NORMAL
+        # btn_print["state"] = tk.NORMAL
         btn_save["state"] = tk.NORMAL
 
     # remove all print files
@@ -150,21 +153,25 @@ def save():
     img_pil = Image.fromarray(pr_img)
 
     draw = ImageDraw.Draw(img_pil)
-    draw.text((100, 3630), text, font=font, fill=(255, 255, 255))
+    draw.text((100, 3550), text, font=font, fill=(255, 255, 255))
     output = np.array(img_pil)
 
+    # TODO: here to save
     # save to file for printing
-    cv2.imwrite("./print/print.png", output)
+    # cv2.imwrite("./print/print.png", output)
 
     """
     update the label image
     """
+    cv2.imwrite("./print/print.png", cv2.resize(output, (disp_width, disp_height)))
     output = Image.fromarray(cv2.cvtColor(cv2.resize(output, (disp_width, disp_height)), cv2.COLOR_BGR2RGB))
     imgtk_output = ImageTk.PhotoImage(image=output)
 
     # opencv video
     label_output.imgtk = imgtk_output
     label_output.configure(image=imgtk_output)
+
+    btn_print["state"] = tk.NORMAL
 
 
 def print_out():
@@ -241,7 +248,7 @@ def video_play():
         # w = int((cw / ch) * disp_height * 0.5)
         w = int(root.winfo_screenwidth() / 2 - cam_width)
         h = int(w * (oh / ow))
-        print("w, h", disp_width, disp_height)
+        # print("w, h", disp_width, disp_height)
 
         content = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
         output = Image.fromarray(cv2.cvtColor(cv2.resize(output, (disp_width, disp_height)), cv2.COLOR_BGR2RGB))
