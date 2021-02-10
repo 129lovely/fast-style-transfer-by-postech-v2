@@ -3,7 +3,7 @@ import tkinter as tk
 import tkinter.font as tkFont
 import tensorflow as tf
 import numpy as np
-import cv2, imutils
+import cv2, imutils, csv
 import transform, my_utils  # import transform.py, cam_utils.py
 
 
@@ -29,14 +29,16 @@ def get_camera_shape(cam):
         return cam.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH), cam.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT)
 
 
-### TODO: read model info from .csv file
-### TODO: just input the artist name, then make path string automatically
-models = [
-    {"path": "models/model_gohg/final.ckpt", "img": "style/gohg.jpg", "artist": "gohg",},
-    {"path": "models/model_unknown02/final.ckpt", "img": "style/unknown02.jpg", "artist": "unknown",},
-    {"path": "models/model_wood/final.ckpt", "img": "style/wood.jpg", "artist": "wood",},
-    {"path": "models/model_agar/final.ckpt", "img": "style/agar.jpg", "artist": "agar",},
-]
+"""
+models
+path: model checkpoint path
+img: style image path
+artist: name of artist
+title: title of art
+"""
+with open("models.csv", "r") as f:
+    models = [{k: v for k, v in row.items()} for row in csv.DictReader(f, skipinitialspace=True)]
+print(models)
 
 opts = {
     "device_id": 0,
@@ -98,7 +100,7 @@ nm = 0
 
 # TODO if stop the video, then init the print directory -> and then activate print, save button!
 def video_stop():
-    print("hello")
+    # print("hello")
     global IS_VIDEO_STOP
     IS_VIDEO_STOP = not IS_VIDEO_STOP
 
@@ -118,7 +120,7 @@ def video_stop():
 def capture():
     global nm, frame
     cv2.imwrite("./capture" + "/" + "./capture_%s.png" % nm, theme.get_output(frame))
-    print("picture is saved!")
+    # print("picture is saved!")
     nm += 1
 
 
@@ -216,7 +218,9 @@ btn_save = tk.Button(frame_top, width=20, text="Save", command=save, state=tk.DI
 btn_save.pack(side=tk.LEFT)
 text_input = tk.Text(frame_top, height=2, font=tk_font)
 text_input.pack(side=tk.LEFT)
-text_artist = tk.Label(frame_top, font=tk_font, text=models[theme.idx]["artist"])
+text_artist = tk.Label(
+    frame_top, font=tk_font, text=("「" + models[theme.idx]["title"] + "」" + ", " + models[theme.idx]["artist"])
+)
 text_artist.pack(side=tk.LEFT, padx=10)
 
 label_content = tk.Label(frame_left)
@@ -253,7 +257,14 @@ def video_play():
         content = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
         output = Image.fromarray(cv2.cvtColor(cv2.resize(output, (disp_width, disp_height)), cv2.COLOR_BGR2RGB))
         # style = Image.open(models[theme.idx]["img"]).resize((700, 528), Image.ANTIALIAS)
-        style = Image.fromarray(cv2.cvtColor(imutils.resize(theme.get_style(), height=500), cv2.COLOR_BGR2RGB))
+        style = theme.get_style()
+        # print(style.shape[0], style.shape[1])  # shape 0 : height
+        style = (
+            imutils.resize(style, height=500)
+            if (style.shape[1] / style.shape[0]) * 500 < 700
+            else imutils.resize(style, width=700)
+        )
+        style = Image.fromarray(cv2.cvtColor(style, cv2.COLOR_BGR2RGB))
 
         imgtk_content = ImageTk.PhotoImage(image=content)
         imgtk_output = ImageTk.PhotoImage(image=output)
@@ -280,7 +291,14 @@ def video_play():
 
         content = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
         output = Image.fromarray(cv2.cvtColor(cv2.resize(output, (disp_width, disp_height)), cv2.COLOR_BGR2RGB))
-        style = Image.fromarray(cv2.cvtColor(imutils.resize(theme.get_style(), height=500), cv2.COLOR_BGR2RGB))
+        style = theme.get_style()
+        # print(style.shape[0], style.shape[1])  # shape 0 : height
+        style = (
+            imutils.resize(style, height=500)
+            if (style.shape[1] / style.shape[0]) * 500 < 700
+            else imutils.resize(style, width=700)
+        )
+        style = Image.fromarray(cv2.cvtColor(style, cv2.COLOR_BGR2RGB))
 
         imgtk_content = ImageTk.PhotoImage(image=content)
         imgtk_output = ImageTk.PhotoImage(image=output)
@@ -299,7 +317,7 @@ def video_play():
 def change_style(is_prev=True):
     global IS_VIDEO_STOP
     theme.change_style(is_prev)
-    text_artist.configure(text=models[theme.idx]["artist"])
+    text_artist.configure(text="「" + models[theme.idx]["title"] + "」" + ", " + models[theme.idx]["artist"])
     if IS_VIDEO_STOP == True:
         video_play()
 
