@@ -1,5 +1,8 @@
 models/
-model_*/
 pre_trained_model/
 __pycache__/
 train2014/
+style/
+print/
+capture/
+.vscode/
