@@ -1,24 +1,34 @@
-import cv2
+from PIL import Image, ImageFont, ImageDraw, ImageTk
+from datetime import date, datetime
+
 import numpy as np
 import tensorflow as tf
+
+import cv2, imutils
 import transform
 
 
-class Theme:
-    def __init__(self, sess, height, width, models):
+class StyleTransfer:
+    def __init__(self, height, width, models):
         self.idx = 0  # index of model
-        self.sess = sess
+        self.sess = self.get_session()  # tensorflow session
         self.img_shape = (height, width, 3)
         self.batch_shape = (1,) + self.img_shape  # add one dim for batch
         self.models = models
         self.config_graph()
         self.load_checkpoint()  # load checkpoint from first model
 
+    # open tensorflow session
+    def get_session(self):
+        g = tf.Graph()
+        soft_config = tf.ConfigProto(allow_soft_placement=True)
+        soft_config.gpu_options.allow_growth = True
+        return tf.Session(config=soft_config)
+
     # load pre-trained model
     def load_checkpoint(self):
         saver = tf.train.Saver()
         model_path = self.models[self.idx]["path"]
-        print(model_path)
         try:
             saver.restore(self.sess, model_path)
             print("load checkpoint: ", model_path)
@@ -58,4 +68,46 @@ class Theme:
         else:
             self.idx = (self.idx + len(self.models) + 1) % len(self.models)
         self.load_checkpoint()
+
+    # get title and artist of style
+    def get_style_info(self):
+        return "「" + self.models[self.idx]["title"] + "」" + ", " + self.models[self.idx]["artist"]
+
+
+class Cam:
+    def __init__(self, device_id, width):
+        self.cam = cv2.VideoCapture(device_id)
+        self.width, self.height = self.get_resized_cam_shape(width)
+
+        self.font = ImageFont.truetype(font="/usr/share/fonts/truetype/nanum/NanumPen.ttf", size=250)
+        pass
+
+    # get width, height for transform
+    def get_resized_cam_shape(self, width):
+        cam_width, cam_height = self.cam.get(cv2.CAP_PROP_FRAME_WIDTH), self.cam.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        width = width if width % 4 == 0 else width + 4 - (width % 4)  # must be divisible by 4
+        height = int(width * float(cam_height / cam_width))  # keep aspect ratio
+        height = height if height % 4 == 0 else height + 4 - (height % 4)  # must be divisible by 4
+
+        # self.cam.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+        # self.cam.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+
+        return width, height
+
+    # set camera frame
+    def set_frame(self):
+        ret, frame = self.cam.read()
+
+        if not ret:
+            print("could not receive frame")
+            self.cam.release()
+            return
+
+        frame = cv2.resize(frame, (self.width, self.height))
+        frame = cv2.flip(frame, 1)
+
+        self.frame = frame
+
+    def get_frame(self):
+        return self.frame
 

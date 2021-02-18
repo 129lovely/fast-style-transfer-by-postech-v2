@@ -7,17 +7,24 @@ import numpy as np
 
 import cv2, imutils
 import csv
-import os, sys
+import os, sys, argparse
 import transform, cam_utils
 
 
 class App(tk.Frame):
-    def __init__(self, master, opts):
-        self.master = master
+    def __init__(self, master, args):
+        """ config member variable """
+        self.is_video_stop = False
+        with open(args.get("models"), "r") as f:
+            self.models = [{k: v for k, v in row.items()} for row in csv.DictReader(f, skipinitialspace=True)]
+        self.cam = cam_utils.Cam(args.device_id, args.width)
+        self.st = cam_utils.StyleTransfer(self.cam.height, self.cam.width, self.models)
+        self.disp_width = args.disp_width
 
         """ config master window """
+        self.master = master
         self.master.title("PONIX")  # set title
-        self.master.attributes("-zoomed", True)  # initialize a window as maximized
+        self.master.attributes("-zoomed", True)  # initialize window as maximized
         self.master.resizable(True, True)  # allow to resize
         self.font_ms_serif = tk.font.Font(self.master, family="MS Serif", size=12)  # config font
 
@@ -30,11 +37,11 @@ class App(tk.Frame):
         self.frame_right.pack(side=tk.RIGHT)
 
         """ config button """
-        self.btn_prev = tk.Button(self.frame_top, width=10, text="◀", command=lambda: change_style(True))
+        self.btn_prev = tk.Button(self.frame_top, width=10, text="◀", command=lambda: self.st.change_style(True))
         self.btn_prev.pack(side=tk.LEFT)
         self.btn_stop = tk.Button(self.frame_top, width=10, text="||", command=self.video_stop)
         self.btn_stop.pack(side=tk.LEFT)
-        self.btn_next = tk.Button(self.frame_top, width=10, text="▶", command=lambda: change_style(False))
+        self.btn_next = tk.Button(self.frame_top, width=10, text="▶", command=lambda: self.st.change_style(False))
         self.btn_next.pack(side=tk.LEFT)
         self.btn_capture = tk.Button(self.frame_top, width=20, text="Capture", command=self.capture)
         self.btn_capture.pack(side=tk.LEFT)
@@ -49,7 +56,7 @@ class App(tk.Frame):
         self.text_artist = tk.Label(
             self.frame_top,
             font=self.font_ms_serif,
-            text=("「" + models[theme.idx]["title"] + "」" + ", " + models[theme.idx]["artist"]),
+            text=("「" + self.models[st.idx]["title"] + "」" + ", " + self.models[st.idx]["artist"]),
         )
         self.text_artist.pack(side=tk.LEFT, padx=10)
 
@@ -61,163 +68,84 @@ class App(tk.Frame):
         self.label_style = tk.Label(self.frame_left)
         self.label_style.grid(row=1, column=0)
 
-        """ config member variable """
-        self.IS_VIDEO_STOP = False
-        with open("final_model_list.csv", "r") as f:
-            self.models = [{k: v for k, v in row.items()} for row in csv.DictReader(f, skipinitialspace=True)]
-
         """ play """
-        self.open_tf_session()
         self.video_play()
 
-    def open_tf_session(self):
-        g = tf.Graph()
-        soft_config = tf.ConfigProto(allow_soft_placement=True)
-        soft_config.gpu_options.allow_growth = True
-        self.sess = tf.Session(config=soft_config)
+    def config_label(self):
+        frame = self.cam.get_frame()
+        output = self.st.get_output(frame)
+        style = self.st.get_style()
 
-        self.cam = cv2.VideoCapture(opts.get("device_id", 0))
-        cam_width, cam_height = get_camera_shape(self.cam)
-        width = width if width % 4 == 0 else width + 4 - (width % 4)  # must be divisible by 4
-        height = int(
-            width * float(cam_height / cam_width)
-        )  # to keep the image ratio between width and height like camera
-        height = height if height % 4 == 0 else height + 4 - (height % 4)  # must be divisible by 4
+        # get disp_height
+        oh, ow, _ = output.shape
+        disp_height = int(self.disp_width * (oh / ow))
 
-    def get_camera_shape(self, cam):
-        cv_version_major, _, _ = cv2.__version__.split(".")
-        print("cv_version_major: ", cv_version_major)
-        if cv_version_major == "3" or cv_version_major == "4":
-            return cam.get(cv2.CAP_PROP_FRAME_WIDTH), cam.get(cv2.CAP_PROP_FRAME_HEIGHT)
-        else:
-            return cam.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH), cam.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT)
+        # resize style
+        style = (
+            imutils.resize(style, height=500)
+            if (style.shape[1] / style.shape[0]) * 500 < 700
+            else imutils.resize(style, width=700)
+        )
 
-    def get_date(self):
-        date_obj = date.today()
-        year = date_obj.year
-        month = date_obj.month
-        day = date_obj.day
-        # TODO: return date string
+        # load content
+        content = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+        imgtk_content = ImageTk.PhotoImage(image=content)
+        self.label_content.imgtk = imgtk_content
+        self.label_content.configure(image=imgtk_content)
+
+        # load output
+        output = Image.fromarray(cv2.cvtColor(cv2.resize(output, (self.disp_width, disp_height)), cv2.COLOR_BGR2RGB))
+        imgtk_output = ImageTk.PhotoImage(image=output)
+        self.label_output.imgtk = imgtk_output
+        self.label_output.configure(image=imgtk_output)
+
+        # load style
+        style = Image.fromarray(cv2.cvtColor(style, cv2.COLOR_BGR2RGB))
+        imgtk_style = ImageTk.PhotoImage(image=style)
+        self.label_style.imgtk = imgtk_style
+        self.label_style.configure(image=imgtk_style)
+
+        # load style info
+        self.text_artist.configure(text=self.st.get_style_info())
 
     def video_play(self):
-        if IS_VIDEO_STOP == False:
-            ret, frame = cam.read()
-
-            if not ret:
-                print("could not receive frame")
-                cam.release()
-                return
-
-            self.frame = cv2.resize(frame, (self.width, self.height))
-            frame = cv2.flip(frame, 1)
-            output = theme.get_output(frame)
-
-            ch, cw, _ = frame.shape  # cam shape
-            oh, ow, _ = output.shape  # output display shape
-
-            disp_height = int(disp_width * (oh / ow))
-            # h = int((ch / cw) * disp_width * 0.5)
-            # w = int((cw / ch) * disp_height * 0.5)
-            w = int(root.winfo_screenwidth() / 2 - cam_width)
-            h = int(w * (oh / ow))
-            # print("w, h", disp_width, disp_height)
-
-            content = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-            output = Image.fromarray(cv2.cvtColor(cv2.resize(output, (disp_width, disp_height)), cv2.COLOR_BGR2RGB))
-            # style = Image.open(models[theme.idx]["img"]).resize((700, 528), Image.ANTIALIAS)
-            style = theme.get_style()
-            # print(style.shape[0], style.shape[1])  # shape 0 : height
-            style = (
-                imutils.resize(style, height=500)
-                if (style.shape[1] / style.shape[0]) * 500 < 700
-                else imutils.resize(style, width=700)
-            )
-            style = Image.fromarray(cv2.cvtColor(style, cv2.COLOR_BGR2RGB))
-
-            imgtk_content = ImageTk.PhotoImage(image=content)
-            imgtk_output = ImageTk.PhotoImage(image=output)
-            imgtk_style = ImageTk.PhotoImage(image=style)
-
-            # opencv video
-            label_content.imgtk = imgtk_content
-            label_content.configure(image=imgtk_content)
-            label_output.imgtk = imgtk_output
-            label_output.configure(image=imgtk_output)
-            label_style.imgtk = imgtk_style
-            label_style.configure(image=imgtk_style)
-
-            root.after(1, video_play)
+        if self.is_video_stop == False:
+            self.cam.set_frame()
+            self.config_label()
+            self.master.after(1, self.video_play)
         else:
-            output = theme.get_output(frame)
-
-            ch, cw, _ = frame.shape  # cam shape
-            oh, ow, _ = output.shape  # output display shape
-
-            disp_height = int(disp_width * (oh / ow))
-            h = int((ch / cw) * disp_width * 0.5)
-            w = int((cw / ch) * disp_height * 0.5)
-
-            content = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-            output = Image.fromarray(cv2.cvtColor(cv2.resize(output, (disp_width, disp_height)), cv2.COLOR_BGR2RGB))
-            style = theme.get_style()
-            # print(style.shape[0], style.shape[1])  # shape 0 : height
-            style = (
-                imutils.resize(style, height=500)
-                if (style.shape[1] / style.shape[0]) * 500 < 700
-                else imutils.resize(style, width=700)
-            )
-            style = Image.fromarray(cv2.cvtColor(style, cv2.COLOR_BGR2RGB))
-
-            imgtk_content = ImageTk.PhotoImage(image=content)
-            imgtk_output = ImageTk.PhotoImage(image=output)
-            imgtk_style = ImageTk.PhotoImage(image=style)
-
-            # opencv video
-            label_content.imgtk = imgtk_content
-            label_content.configure(image=imgtk_content)
-            label_output.imgtk = imgtk_output
-            label_output.configure(image=imgtk_output)
-            label_style.imgtk = imgtk_style
-            label_style.configure(image=imgtk_style)
+            self.config_label()
             return
 
     def video_stop(self):
-        global IS_VIDEO_STOP
-        IS_VIDEO_STOP = not IS_VIDEO_STOP
+        self.is_video_stop = not self.is_video_stop
 
-        if IS_VIDEO_STOP == False:
-            btn_print["state"] = tk.DISABLED
-            btn_save["state"] = tk.DISABLED
+        if self.is_video_stop == False:
+            self.btn_print["state"] = tk.DISABLED
+            self.btn_save["state"] = tk.DISABLED
         else:
-            # btn_print["state"] = tk.NORMAL
-            btn_save["state"] = tk.NORMAL
+            self.btn_save["state"] = tk.NORMAL
 
         # remove all print files
         if os.path.exists("./print/print.png"):
             os.remove(r"./print/print.png")
-        video_play()
 
     def capture(self):
-        global nm, frame
-        cv2.imwrite("./capture" + "/" + "./capture_%s.png" % nm, theme.get_output(frame))
-        # print("picture is saved!")
-        nm += 1
+        # e.g. capture_2021/01/29-12:34:56
+        cv2.imwrite(
+            "./capture" + "/" + "./capture_%s.png" % datetime.now().strftime("%Y/%m/%d-%H:%M:%S"), st.get_output(frame)
+        )
 
     def save(self):
-        global frame
-        output = theme.get_output(frame)
+        output = self.st.get_output(frame)
 
-        ch, cw, _ = frame.shape  # cam shape
-        oh, ow, _ = output.shape  # output display shape
-
+        oh, ow, _ = output.shape
         disp_height = int(disp_width * (oh / ow))
-        h = int((ch / cw) * disp_width * 0.5)
-        w = int((cw / ch) * disp_height * 0.5)
 
         """
         here to start the merge output & style image
         """
-        style_downscale = imutils.resize(theme.get_style(), width=100, inter=cv2.INTER_AREA)
+        style_downscale = imutils.resize(st.get_style(), width=100, inter=cv2.INTER_AREA)
         x_offset = 590
         y_offset = 10
         output[
@@ -237,10 +165,6 @@ class App(tk.Frame):
         draw.text((100, 3550), text, font=font, fill=(255, 255, 255))
         output = np.array(img_pil)
 
-        # TODO: here to save
-        # save to file for printing
-        # cv2.imwrite("./print/print.png", output)
-
         """
         update the label image
         """
@@ -254,49 +178,34 @@ class App(tk.Frame):
 
         btn_print["state"] = tk.NORMAL
 
+        # TODO: write date
+        today = datetime.now().strftime("%Y-%m-%d")
+
+        pass
+
     def print_out(self):
-        # global frame
-        # output = theme.get_output(frame)
-        # pr_img = np.zeros((3840, 5120, 3), dtype="uint8") + 255  # resizing
-        # resizeH = int(3840 * 1)
-        # img = cv2.resize(output, (5120, resizeH))
-        # pr_img[:resizeH, :, :] = img
-        # img_pil = Image.fromarray(pr_img)
-        # draw = ImageDraw.Draw(img_pil)
-        # draw.text(
-        #     (640, 3640), "포항공과대학교 인공지능연구원 방문 기념  {}.{}.{}".format(year, month, day), font=font, fill=(255, 255, 255, 0),
-        # )
-        # pr_img = np.array(img_pil)
-        # cv2.imwrite("./print" + "/" "print.png", pr_img)
         os.system("lpr ./print/print.png")
 
-    def change_style(self, is_prev=True):
-        global IS_VIDEO_STOP
-        theme.change_style(is_prev)
-        text_artist.configure(text="「" + models[theme.idx]["title"] + "」" + ", " + models[theme.idx]["artist"])
-        if IS_VIDEO_STOP == True:
-            video_play()
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--device_id", default=0, type=int, required=True, help="id of camera device")
+    parser.add_argument("--width", default=700, type=int, required=True, help="width of output image")
+    parser.add_argument("--disp_width", default=1215, type=int, required=True, help="width of window area")
+    parser.add_argument("--num_sec", default=10, type=int, required=True, help="autoplay interval")
+    parser.add_argument("--models", type=str, required=True, help="path/to/models.csv")
+    return parser.parse_args()
 
 
-if __name__ == "__main__":
-    opts = {
-        "device_id": 0,
-        "width": 700,
-        "disp_width": 1215,
-        "disp_source": 1,
-        "horizontal": 1,
-        "num_sec": 10,
-    }
+def main():
+    args = parse_args()  # parse arguments
+
+    # TODO: check and create file dir (/print, /capture)
+
     root = tk.Tk()
-    app = App(root, opts)
+    app = App(root, args)
     root.mainloop()
 
 
-# config font
-# fontpath = "/usr/share/fonts/truetype/nanum/NanumBrush.ttf"  # brush
-fontpath = "/usr/share/fonts/truetype/nanum/NanumPen.ttf"  # pen
-font = ImageFont.truetype(font=fontpath, size=250)
-###################################################################
-
-# create style instance
-theme = cam_utils.Theme(sess, height, width, models)
+if __name__ == "__main__":
+    main()
