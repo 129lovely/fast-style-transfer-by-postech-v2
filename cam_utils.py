@@ -82,6 +82,7 @@ class Cam:
     # get width, height for transform
     def get_resized_cam_shape(self, width):
         cam_width, cam_height = self.cam.get(cv2.CAP_PROP_FRAME_WIDTH), self.cam.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        print("cam width: %f, cam height: %f" % (cam_width, cam_height))
         width = width if width % 4 == 0 else width + 4 - (width % 4)  # must be divisible by 4
         height = int(width * float(cam_height / cam_width))  # keep aspect ratio
         height = height if height % 4 == 0 else height + 4 - (height % 4)  # must be divisible by 4
@@ -100,11 +101,13 @@ class Cam:
             self.cam.release()
             return
 
-        frame = cv2.resize(frame, (self.width, self.height))
         frame = cv2.flip(frame, 1)
 
-        self.frame = frame
+        self.input_frame = cv2.resize(frame, (self.width, self.height))
+        self.label_frame = cv2.resize(frame, (self.width, self.height))
 
-    def get_frame(self):
+    def get_input_frame(self):
         return self.frame
 
+    def get_cam_frame(self):
+        return self.frame

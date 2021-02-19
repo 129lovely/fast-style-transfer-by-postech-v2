@@ -186,6 +186,7 @@ class App(tk.Frame):
 
 
 def parse_args():
+    # TODO: inp_width, lab_width
     parser = argparse.ArgumentParser()
     parser.add_argument("--device_id", default=0, type=int, help="id of camera device")
     parser.add_argument("--width", default=700, type=int, help="width of output image")
