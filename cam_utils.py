@@ -79,9 +79,6 @@ class Cam:
         self.cam = cv2.VideoCapture(device_id)
         self.width, self.height = self.get_resized_cam_shape(width)
 
-        self.font = ImageFont.truetype(font="/usr/share/fonts/truetype/nanum/NanumPen.ttf", size=250)
-        pass
-
     # get width, height for transform
     def get_resized_cam_shape(self, width):
         cam_width, cam_height = self.cam.get(cv2.CAP_PROP_FRAME_WIDTH), self.cam.get(cv2.CAP_PROP_FRAME_HEIGHT)
