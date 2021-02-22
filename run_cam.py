@@ -10,25 +10,19 @@ import cv2, imutils
 import csv
 import os, sys, argparse
 import transform, cam_utils
+import ctypes
 
 
 class App(tk.Frame):
     def __init__(self, master, args):
-        """ config member variable """
-        self.is_video_stop = False
-        with open(args.models, "r") as f:
-            self.models = [{k: v for k, v in row.items()} for row in csv.DictReader(f, skipinitialspace=True)]
-        self.cam = cam_utils.Cam(args.device_id, args.width)
-        self.st = cam_utils.StyleTransfer(self.cam.height, self.cam.width, self.models)
-        self.disp_width = args.disp_width
-
         """ config master window """
         self.master = master
-        self.master.title("PONIX")  # set title
         self.master.attributes("-zoomed", True)  # initialize window as maximized
-        self.master.resizable(True, True)  # allow to resize
+        self.master.title("PONIX")  # set title
+        self.master.resizable(False, False)  # not allow to resize
         # TODO: change font
         self.font_ms_serif = tkFont.Font(self.master, family="MS Serif", size=12)  # config font
+        print("available font list: ", list(tkFont.families()))
 
         """ config frame """
         self.frame_top = tk.Frame(self.master)
@@ -39,21 +33,21 @@ class App(tk.Frame):
         self.frame_right.pack(side=tk.RIGHT)
 
         """ config button """
-        self.btn_prev = tk.Button(self.frame_top, width=10, text="◀", command=lambda: self.change_style(True))
+        self.btn_prev = tk.Button(self.frame_top, width=5, text="◀", command=lambda: self.change_style(True))
         self.btn_prev.pack(side=tk.LEFT)
-        self.btn_stop = tk.Button(self.frame_top, width=10, text="||", command=self.video_stop)
+        self.btn_stop = tk.Button(self.frame_top, width=5, text="||", command=self.video_stop)
         self.btn_stop.pack(side=tk.LEFT)
-        self.btn_next = tk.Button(self.frame_top, width=10, text="▶", command=lambda: self.change_style(False))
+        self.btn_next = tk.Button(self.frame_top, width=5, text="▶", command=lambda: self.change_style(False))
         self.btn_next.pack(side=tk.LEFT)
-        self.btn_capture = tk.Button(self.frame_top, width=20, text="Capture", command=self.capture)
+        self.btn_capture = tk.Button(self.frame_top, width=15, text="Capture", command=self.capture)
         self.btn_capture.pack(side=tk.LEFT)
-        self.btn_print = tk.Button(self.frame_top, width=20, text="Print", command=self.print_out, state=tk.DISABLED)
+        self.btn_print = tk.Button(self.frame_top, width=15, text="Print", command=self.print_out, state=tk.DISABLED)
         self.btn_print.pack(side=tk.LEFT)
-        self.btn_save = tk.Button(self.frame_top, width=20, text="Save", command=self.save, state=tk.DISABLED)
+        self.btn_save = tk.Button(self.frame_top, width=15, text="Save", command=self.save, state=tk.DISABLED)
         self.btn_save.pack(side=tk.LEFT)
 
         """ config text """
-        self.text_input = tk.Text(self.frame_top, height=2, font=self.font_ms_serif)
+        self.text_input = tk.Text(self.frame_top, height=1, font=self.font_ms_serif)
         self.text_input.pack(side=tk.LEFT)
         self.text_artist = tk.Label(self.frame_top, font=self.font_ms_serif, text="")
         self.text_artist.pack(side=tk.LEFT, padx=10)
@@ -65,6 +59,21 @@ class App(tk.Frame):
         self.label_output.grid(row=0, column=0)
         self.label_style = tk.Label(self.frame_left)
         self.label_style.grid(row=1, column=0)
+
+        """ config member variable """
+        self.master.update()
+        with open(args.models, "r") as f:
+            self.models = [{k: v for k, v in row.items()} for row in csv.DictReader(f, skipinitialspace=True)]
+        self.is_video_stop = False  # flag in order to check if video stop
+        self.disp_height = (
+            self.master.winfo_height() - self.frame_top.winfo_height()
+        )  # height of display (not include navigation bar)
+        self.cam = cam_utils.Cam(
+            args.device_id, args.inp_width, self.master.winfo_width(), self.disp_height
+        )  # cam instance
+        self.styleTransfer = cam_utils.StyleTransfer(
+            self.cam.inp_height, self.cam.inp_width, self.models
+        )  # style transfer instance
 
         """ play """
         self.video_play()
@@ -79,29 +88,26 @@ class App(tk.Frame):
 
     # update entire window
     def update_window(self, output=None):
-        frame = self.cam.get_frame()
-        output = self.st.get_output(frame)
-        style = self.st.get_style()
-
-        # get disp_height
-        oh, ow, _ = output.shape
-        disp_height = int(self.disp_width * (oh / ow))
+        inp_frame, lab_frame = self.cam.get_frame()
+        output = self.styleTransfer.get_output(inp_frame)
+        style = self.styleTransfer.get_style()
 
         # resize output and style
-        output = cv2.resize(output, (self.disp_width, disp_height))
+        output = imutils.resize(output, height=self.disp_height)
         style = (
-            imutils.resize(style, height=500)
-            if (style.shape[1] / style.shape[0]) * 500 < 700
-            else imutils.resize(style, width=700)
+            cv2.resize(style, (lab_frame.shape[1], self.disp_height - lab_frame.shape[0]))
+            # TODO: resize the style image in order to make them full size
+            # if (style.shape[1] / style.shape[0]) * 500 < 700
+            # else imutils.resize(style, width=700)
         )
 
         # load images in label
-        self.update_label(frame, self.label_content)
+        self.update_label(lab_frame, self.label_content)
         self.update_label(output, self.label_output)
         self.update_label(style, self.label_style)
 
         # load style info in text
-        self.text_artist.configure(text=self.st.get_style_info())
+        self.text_artist.configure(text=self.styleTransfer.get_style_info())
 
     def video_play(self):
         if self.is_video_stop == True:
@@ -129,27 +135,29 @@ class App(tk.Frame):
             os.remove(r"./print/print.png")
 
     def change_style(self, is_prev=True):
-        self.st.change_style(is_prev)
+        self.styleTransfer.change_style(is_prev)
         if self.is_video_stop == True:
             self.video_play()
 
     def capture(self):
+        inp_frame, _ = self.cam.get_frame()
         # e.g. capture_20210129_12'34'56
         cv2.imwrite(
             "capture/capture_%s.png" % datetime.now().strftime("%Y%m%d_%H'%M'%S"),
-            self.st.get_output(self.cam.get_frame()),
+            self.styleTransfer.get_output(inp_frame),
         )
         print("save capture!")
 
     def save(self):
-        output = self.st.get_output(self.cam.get_frame())
+        inp_frame, _ = self.cam.get_frame()
+        output = self.styleTransfer.get_output(inp_frame)
 
         oh, ow, _ = output.shape
-        disp_width = self.disp_width
-        disp_height = int(self.disp_width * (oh / ow))
+        disp_height = self.disp_height
+        disp_width = int(self.disp_height * (ow / oh))
 
         # merge ouput and style
-        style_downscale = imutils.resize(self.st.get_style(), width=100, inter=cv2.INTER_AREA)
+        style_downscale = imutils.resize(self.styleTransfer.get_style(), width=100, inter=cv2.INTER_AREA)
         x_offset = 590
         y_offset = 10
         output[
@@ -172,12 +180,12 @@ class App(tk.Frame):
         )
         # TODO: write date
         # today = datetime.now().strftime("%Y-%m-%d")
+
+        # resizing
         output = np.array(img_pil)
+        output = cv2.resize(output, (disp_width, disp_height))
 
-        # save print.png
-        cv2.imwrite("print/print.png", cv2.resize(output, (disp_width, disp_height)))
-
-        output = cv2.resize(output, (disp_width, disp_height))  # resizing
+        cv2.imwrite("print/print.png", output)  # save print.png
         self.update_label(output, self.label_output)  # update label
         self.btn_print["state"] = tk.NORMAL  # update button state
 
@@ -186,11 +194,10 @@ class App(tk.Frame):
 
 
 def parse_args():
-    # TODO: inp_width, lab_width
     parser = argparse.ArgumentParser()
     parser.add_argument("--device_id", default=0, type=int, help="id of camera device")
-    parser.add_argument("--width", default=700, type=int, help="width of output image")
-    parser.add_argument("--disp_width", default=1215, type=int, help="width of window area")
+    parser.add_argument("--inp_width", default=700, type=int, help="width of input image")
+    # parser.add_argument("--disp_width", default=1215, type=int, help="width of window area")
     parser.add_argument("--num_sec", default=10, type=int, help="autoplay interval")
     parser.add_argument("--models", type=str, required=True, help="path/to/models.csv")
     return parser.parse_args()
