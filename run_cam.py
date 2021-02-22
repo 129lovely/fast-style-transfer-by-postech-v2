@@ -12,7 +12,8 @@ import tkinter as tk
 import tkinter.font as tkFont
 import tkinter.messagebox as tkMassage
 import smtplib
-
+from tkinter import simpledialog
+from tkinter import messagebox
 
 import tensorflow as tf
 import numpy as np
@@ -64,10 +65,10 @@ class App(tk.Frame):
         self.btn_save.pack(side=tk.LEFT)
 
         """ config text """
-        self.text_input = tk.Text(self.frame_top, height=2, font=self.font_ms_serif)
+        self.text_input = tk.Text(self.frame_top, height=1, width=40, font=self.font_ms_serif)
         self.text_input.pack(side=tk.LEFT)
         self.text_artist = tk.Label(self.frame_top, font=self.font_ms_serif, text="")
-        self.text_artist.pack(side=tk.LEFT, padx=10)
+        self.text_artist.pack(side=tk.RIGHT, padx=10)
 
         """ config label """
         self.label_content = tk.Label(self.frame_left)
@@ -87,7 +88,7 @@ class App(tk.Frame):
 
             # config button for eamil service
             self.btn_email = tk.Button(
-                self.frame_top, width=20, text="Email", command=self.send_email, state=tk.DISABLED
+                self.frame_top, width=15, text="Email", command=self.send_email, state=tk.DISABLED
             )
             self.btn_email.pack(side=tk.LEFT)
 
@@ -226,15 +227,11 @@ class App(tk.Frame):
 
     # send mail to respected receiver
     def send_email(self):
-
-        # for test
         sender = self.EMAIL_ADDRESS
         password = self.EMAIL_PASSWORD
-        receiver = "miraekiim@gmail.com"
+        receiver = simpledialog.askstring(title="send email", prompt="your email address:")
         title = "from postech ai lab"
         filename = "photo.png"
-
-        print(sender)
 
         msg = MIMEMultipart()
         msg["From"] = sender
@@ -256,9 +253,12 @@ class App(tk.Frame):
                 server.starttls()  # put connection to smtp server
                 server.login(sender, password)  # login to account of sender
                 server.sendmail(sender, receiver, msg.as_string())
+                server.close()
                 print("success to send email", receiver)
+                messagebox.showinfo(message="success to send email!")
         except Exception as e:
             print("fail to send mail:", e)
+            messagebox.showerror(message="fail to send mail...(unexpected error occured)")
 
 
 def parse_args():
