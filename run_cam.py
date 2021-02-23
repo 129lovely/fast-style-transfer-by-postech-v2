@@ -1,8 +1,20 @@
 from PIL import Image, ImageFont, ImageDraw, ImageTk
 from datetime import date, datetime
 
+from dotenv import load_dotenv
+from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
+from email.mime.multipart import MIMEMultipart
+from email.mime.application import MIMEApplication
+from email.utils import COMMASPACE, formatdate
+
 import tkinter as tk
 import tkinter.font as tkFont
+import tkinter.messagebox as tkMassage
+import smtplib
+from tkinter import simpledialog
+from tkinter import messagebox
+
 import tensorflow as tf
 import numpy as np
 
@@ -53,10 +65,10 @@ class App(tk.Frame):
         self.btn_save.pack(side=tk.LEFT)
 
         """ config text """
-        self.text_input = tk.Text(self.frame_top, height=2, font=self.font_ms_serif)
+        self.text_input = tk.Text(self.frame_top, height=1, width=40, font=self.font_ms_serif)
         self.text_input.pack(side=tk.LEFT)
         self.text_artist = tk.Label(self.frame_top, font=self.font_ms_serif, text="")
-        self.text_artist.pack(side=tk.LEFT, padx=10)
+        self.text_artist.pack(side=tk.RIGHT, padx=10)
 
         """ config label """
         self.label_content = tk.Label(self.frame_left)
@@ -65,6 +77,20 @@ class App(tk.Frame):
         self.label_output.grid(row=0, column=0)
         self.label_style = tk.Label(self.frame_left)
         self.label_style.grid(row=1, column=0)
+
+        """ config email service """
+        if args.email == True:
+            load_dotenv()  # load env variable
+
+            # set email address and password
+            self.EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
+            self.EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
+
+            # config button for eamil service
+            self.btn_email = tk.Button(
+                self.frame_top, width=15, text="Email", command=self.send_email, state=tk.DISABLED
+            )
+            self.btn_email.pack(side=tk.LEFT)
 
         """ play """
         self.video_play()
@@ -122,6 +148,12 @@ class App(tk.Frame):
         else:
             self.btn_print["state"] = tk.DISABLED
             self.btn_save["state"] = tk.DISABLED
+
+            # for email service
+            try:
+                self.btn_email["state"] = tk.DISABLED
+            except:
+                pass
             self.video_play()
 
         # remove all print files
@@ -177,12 +209,56 @@ class App(tk.Frame):
         # save print.png
         cv2.imwrite("print/print.png", cv2.resize(output, (disp_width, disp_height)))
 
+        # update label
         output = cv2.resize(output, (disp_width, disp_height))  # resizing
-        self.update_label(output, self.label_output)  # update label
-        self.btn_print["state"] = tk.NORMAL  # update button state
+        self.update_label(output, self.label_output)
+
+        # update button state
+        self.btn_print["state"] = tk.NORMAL
+
+        # for email service
+        try:
+            self.btn_email["state"] = tk.NORMAL
+        except:
+            pass
 
     def print_out(self):
         os.system("lpr print/print.png")
+
+    # send mail to respected receiver
+    def send_email(self):
+        sender = self.EMAIL_ADDRESS
+        password = self.EMAIL_PASSWORD
+        receiver = simpledialog.askstring(title="send email", prompt="your email address:")
+        title = "from postech ai lab"
+        filename = "photo.png"
+
+        msg = MIMEMultipart()
+        msg["From"] = sender
+        msg["To"] = COMMASPACE.join(receiver)
+        msg["DATE"] = formatdate(localtime=True)
+        msg["Subject"] = title
+        # msg.attach(MIMEText())
+
+        with open("print/print.png", "rb") as f:
+            part = MIMEApplication(f.read(), Name=filename)
+
+        part["Content-Disposition"] = 'attachment; filename="%s"' % filename
+        msg.attach(part)
+
+        try:
+            # only for gmail account
+            with smtplib.SMTP("smtp.gmail.com:587") as server:
+                server.ehlo()  # local host
+                server.starttls()  # put connection to smtp server
+                server.login(sender, password)  # login to account of sender
+                server.sendmail(sender, receiver, msg.as_string())
+                server.close()
+                print("success to send email", receiver)
+                messagebox.showinfo(message="success to send email!")
+        except Exception as e:
+            print("fail to send mail:", e)
+            messagebox.showerror(message="fail to send mail...(unexpected error occured)")
 
 
 def parse_args():
@@ -191,6 +267,7 @@ def parse_args():
     parser.add_argument("--width", default=700, type=int, help="width of output image")
     parser.add_argument("--disp_width", default=1215, type=int, help="width of window area")
     parser.add_argument("--num_sec", default=10, type=int, help="autoplay interval")
+    parser.add_argument("--email", default=False, type=bool, help="want email service")
     parser.add_argument("--models", type=str, required=True, help="path/to/models.csv")
     return parser.parse_args()
 
@@ -204,6 +281,7 @@ def main():
         if not os.path.exists(directory):
             os.makedirs(directory)
 
+    # show up tkinter window
     root = tk.Tk()
     app = App(root, args)
     root.mainloop()
