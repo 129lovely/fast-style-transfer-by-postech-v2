@@ -4,8 +4,9 @@ from datetime import date, datetime
 import numpy as np
 import tensorflow as tf
 
-import cv2, imutils
+import cv2
 import transform
+import ctypes
 
 
 class StyleTransfer:
@@ -75,23 +76,29 @@ class StyleTransfer:
 
 
 class Cam:
-    def __init__(self, device_id, width):
+    def __init__(self, device_id, inp_width, disp_width, disp_height):
         self.cam = cv2.VideoCapture(device_id)
-        self.width, self.height = self.get_resized_cam_shape(width)
+        self.set_frame_shape(inp_width, disp_width, disp_height)
 
-    # get width, height for transform
-    def get_resized_cam_shape(self, width):
+    # set frame shape
+    def set_frame_shape(self, inp_width, disp_width, disp_height):
+        """ get cam shape """
         cam_width, cam_height = self.cam.get(cv2.CAP_PROP_FRAME_WIDTH), self.cam.get(cv2.CAP_PROP_FRAME_HEIGHT)
-        width = width if width % 4 == 0 else width + 4 - (width % 4)  # must be divisible by 4
-        height = int(width * float(cam_height / cam_width))  # keep aspect ratio
-        height = height if height % 4 == 0 else height + 4 - (height % 4)  # must be divisible by 4
+        print("cam width: %f, cam height: %f" % (cam_width, cam_height))
 
-        # self.cam.set(cv2.CAP_PROP_FRAME_WIDTH, width)
-        # self.cam.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+        """ set input frame shape for transform """
+        self.inp_width = inp_width if inp_width % 4 == 0 else inp_width + 4 - (inp_width % 4)  # must be divisible by 4
+        inp_height = int(inp_width * float(cam_height / cam_width))  # keep aspect ratio
+        self.inp_height = (
+            inp_height if inp_height % 4 == 0 else inp_height + 4 - (inp_height % 4)
+        )  # must be divisible by 4
 
-        return width, height
+        """ set label frame shape """
+        out_width = int(disp_height * float(self.inp_width / self.inp_height))
+        self.lab_width = disp_width - out_width
+        self.lab_height = int(self.lab_width * float(cam_height / cam_width))  # keep aspect ratio
 
-    # set camera frame
+    # set input and label frame
     def set_frame(self):
         ret, frame = self.cam.read()
 
@@ -100,11 +107,10 @@ class Cam:
             self.cam.release()
             return
 
-        frame = cv2.resize(frame, (self.width, self.height))
         frame = cv2.flip(frame, 1)
 
-        self.frame = frame
+        self.inp_frame = cv2.resize(frame, (self.inp_width, self.inp_height))
+        self.lab_frame = cv2.resize(frame, (self.lab_width, self.lab_height))
 
     def get_frame(self):
-        return self.frame
-
+        return self.inp_frame, self.lab_frame
