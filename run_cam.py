@@ -23,7 +23,7 @@ import csv
 import os, sys, argparse
 import transform, cam_utils
 import ctypes
-
+import time
 
 class App(tk.Frame):
     def __init__(self, master, args):
@@ -86,6 +86,10 @@ class App(tk.Frame):
         self.styleTransfer = cam_utils.StyleTransfer(
             self.cam.inp_height, self.cam.inp_width, self.models
         )  # style transfer instance
+        self.start_time = time.time()
+            #time instance for autoplay
+        self.sec = args.num_sec
+            #time unit for style change in autoplay
 
         """ config email service """
         if args.email == True:
@@ -114,6 +118,7 @@ class App(tk.Frame):
 
     # update entire window
     def update_window(self, output=None):
+        
         inp_frame, lab_frame = self.cam.get_frame()
         output = self.styleTransfer.get_output(inp_frame)
         style = self.styleTransfer.get_style()
@@ -134,17 +139,20 @@ class App(tk.Frame):
 
         # load style info in text
         self.text_artist.configure(text=self.styleTransfer.get_style_info())
-
+   
     def video_play(self):
+        start_time = time.time()
         if self.is_video_stop == True:
-            # TODO: don't change style
             self.update_window()
             return
         else:
-            # TODO: change style
+            change_point = (start_time - self.start_time)%self.sec
             self.cam.set_frame()
             self.update_window()
-            self.master.after(1, self.video_play)
+            self.master.after(1,self.video_play)
+            if change_point < 0.1:
+                self.styleTransfer.change_style()
+                #automatic style change
 
     def video_stop(self):
         self.is_video_stop = not self.is_video_stop
@@ -170,7 +178,8 @@ class App(tk.Frame):
         self.styleTransfer.change_style(is_prev)
         if self.is_video_stop == True:
             self.video_play()
-
+            
+            
     def capture(self):
         inp_frame, _ = self.cam.get_frame()
         # e.g. capture_20210129_12'34'56
@@ -207,11 +216,16 @@ class App(tk.Frame):
         draw.text(
             (100, 3550),
             text,
-            font=ImageFont.truetype(font="/usr/share/fonts/truetype/nanum/NanumPen.ttf", size=250),
+            font=ImageFont.truetype(font="/usr/share/fonts/truetype/nanumfont/NanumPen.ttf", size=250),
             fill=(255, 255, 255),
         )
-        # TODO: write date
-        # today = datetime.now().strftime("%Y-%m-%d")
+        
+        # write date with postech sign
+        today = datetime.now().strftime("%Y.%m.%d")
+        text = today + ' POSTECH인공지능연구원'
+        font = ImageFont.truetype('NanumGothicBold.ttf',90)
+        draw.text((100,3430), text, font=font)
+        
 
         # resizing
         output = np.array(img_pil)
