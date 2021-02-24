@@ -32,7 +32,7 @@ class App(tk.Frame):
         self.master.title("PONIX")  # set title
         self.master.resizable(False, False)  # not allow to resize
         # TODO: change font
-        self.font_ms_serif = tkFont.Font(self.master, family="MS Serif", size=12)  # config font
+        self.font_ms_serif = tkFont.Font(self.master, family="NanumGothic", size=12)  # config font
         print("available font list: ", list(tkFont.families()))
 
         """ config frame """
@@ -58,7 +58,7 @@ class App(tk.Frame):
         self.btn_save.pack(side=tk.LEFT)
 
         """ config text """
-        self.text_input = tk.Text(self.frame_top, height=1, font=self.font_ms_serif)
+        self.text_input = tk.Text(self.frame_top, height=1, width=45, font=self.font_ms_serif)
         self.text_input.pack(side=tk.LEFT)
         self.text_artist = tk.Label(self.frame_top, font=self.font_ms_serif, text="")
         self.text_artist.pack(side=tk.RIGHT, padx=10)
@@ -73,7 +73,7 @@ class App(tk.Frame):
 
         """ config member variable """
         self.master.update()
-        with open(args.models, "r") as f:
+        with open(args.models, "r", encoding="utf-8") as f:
             self.models = [{k: v for k, v in row.items()} for row in csv.DictReader(f, skipinitialspace=True)]
         self.is_video_stop = False  # flag in order to check if video stop
         self.disp_height = (
@@ -154,7 +154,6 @@ class App(tk.Frame):
                 self.styleTransfer.change_style(False)
                 self.start_time = start_time                
 
-
     def video_stop(self):
         self.is_video_stop = not self.is_video_stop
 
@@ -213,6 +212,7 @@ class App(tk.Frame):
         ] = style_downscale
 
         # write text
+        fontpath = "/fonts/NanumPen.ttf"
         text = self.text_input.get("1.0", tk.END)
         pr_img = np.zeros((3840, 5120, 3), dtype="uint8") + 255  # resizing
         resized_height = int(3840 * 1)
@@ -221,18 +221,14 @@ class App(tk.Frame):
         img_pil = Image.fromarray(pr_img)
         draw = ImageDraw.Draw(img_pil)
         draw.text(
-            (100, 3550),
-            text,
-            font=ImageFont.truetype(font="/usr/share/fonts/truetype/nanumfont/NanumPen.ttf", size=250),
-            fill=(255, 255, 255),
+            (120, 3530), text, font=ImageFont.truetype(font=fontpath, size=250), fill=(255, 255, 255),
         )
 
         # write date with postech sign
         today = datetime.now().strftime("%Y.%m.%d")
         text = today + " POSTECH 인공지능연구원"
-        font = ImageFont.truetype("NanumPen.ttf", 130)
         draw.text(
-            (100, 3430), text, font=font,
+            (120, 3370), text, font=ImageFont.truetype(font=fontpath, size=180),
         )
 
         # resizing
@@ -250,7 +246,9 @@ class App(tk.Frame):
             pass
 
     def print_out(self):
-        os.system("lpr print/print.png")
+        # os.system("/bin/bash -c 'lpr print/print.png'")
+        with open("./scripts/print_out_container.sh", "w") as f:
+            f.write("#!/bin/bash\nlpr ../print/print.png")
 
     # send mail to respected receiver
     def send_email(self):
@@ -262,7 +260,7 @@ class App(tk.Frame):
 
         msg = MIMEMultipart()
         msg["From"] = sender
-        msg["To"] = COMMASPACE.join(receiver)
+        msg["To"] = ', '.join(receiver)
         msg["DATE"] = formatdate(localtime=True)
         msg["Subject"] = title
         # msg.attach(MIMEText())
