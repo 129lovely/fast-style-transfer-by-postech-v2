@@ -22,7 +22,6 @@ import cv2, imutils
 import csv
 import os, sys, argparse
 import transform, cam_utils
-import ctypes
 import time
 
 class App(tk.Frame):
