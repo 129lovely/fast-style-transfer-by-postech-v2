@@ -1,0 +1,21 @@
+NO,path,img,title,artist
+1,models/wood/final.ckpt,style/wood.jpg,아메리칸 고딕,그랜트 우드
+2,models/wave/final.ckpt,style/wave.jpg,가나가와 해변의 높은 파도 아래,가쓰시카 호쿠사이
+3,models/warhol/final.ckpt,style/warhol.jpg,마릴린 먼로,앤디 워홀
+4,models/schiele/final.ckpt,style/schiele.jpg,꽈리열매가 있는 자화상,에곤 쉴레
+5,models/picasso02/final.ckpt,style/picasso02.jpg,라 뮤즈,파블로 피카소
+6,models/gohg/final.ckpt,style/gohg.jpg,별이 빛나는 밤,빈센트 반 고흐
+7,models/cezanne/final.ckpt,style/cezanne.jpg,병과 사과바구니가 있는 정물,폴 세잔
+8,models/gaudi2/final.ckpt,style/gaudi2.jpg,가우디 건축 양식,작자 미상
+9,models/klimt/final.ckpt,style/klimt.jpg,키스,구스타프 클림트
+10,models/yoonbok/final.ckpt,style/yoonbok.jpg,단오풍경,신윤복
+11,models/unknown02/final.ckpt,style/unknown02.jpg,까치 호랑이,작자 미상
+12,models/lichtenstein/final.ckpt,style/lichtenstein.jpg,아를의 반고흐의 방,로이 리히텐슈타인
+13,models/agar/final.ckpt,style/agar.jpg,정원 속의 형상,에일린 아거
+14,models/dali/final.ckpt,style/dali.jpg,기억의 지속,살바도르 달리
+15,models/seurat2/final.ckpt,style/seurat2.jpg,에펠탑,조르주 피에르 쇠라
+16,models/mondrian2/final.ckpt,style/mondrian2.jpg,구성 A,피트 몬드리안
+17,models/matisse2/final.ckpt,style/matisse2.jpg,다발,앙리 마티스
+18,models/gohg2/final.ckpt,style/gohg2.jpg,삼나무가 있는 밀밭,빈센트 반 고흐
+19,models/warhol2/final.ckpt,style/warhol2.jpg,100개의 켐벨 깡통,앤디 워홀
+20,models/kandinsky2/final.ckpt,style/kandinsky2.jpg,색채연구,칸딘 스키

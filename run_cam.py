@@ -22,8 +22,7 @@ import cv2, imutils
 import csv
 import os, sys, argparse
 import transform, cam_utils
-import ctypes
-
+import time
 
 class App(tk.Frame):
     def __init__(self, master, args):
@@ -33,7 +32,7 @@ class App(tk.Frame):
         self.master.title("PONIX")  # set title
         self.master.resizable(False, False)  # not allow to resize
         # TODO: change font
-        self.font_ms_serif = tkFont.Font(self.master, family="MS Serif", size=12)  # config font
+        self.font_ms_serif = tkFont.Font(self.master, family="NanumGothic", size=12)  # config font
         print("available font list: ", list(tkFont.families()))
 
         """ config frame """
@@ -59,7 +58,7 @@ class App(tk.Frame):
         self.btn_save.pack(side=tk.LEFT)
 
         """ config text """
-        self.text_input = tk.Text(self.frame_top, height=1, font=self.font_ms_serif)
+        self.text_input = tk.Text(self.frame_top, height=1, width=45, font=self.font_ms_serif)
         self.text_input.pack(side=tk.LEFT)
         self.text_artist = tk.Label(self.frame_top, font=self.font_ms_serif, text="")
         self.text_artist.pack(side=tk.RIGHT, padx=10)
@@ -74,7 +73,7 @@ class App(tk.Frame):
 
         """ config member variable """
         self.master.update()
-        with open(args.models, "r") as f:
+        with open(args.models, "r", encoding="utf-8") as f:
             self.models = [{k: v for k, v in row.items()} for row in csv.DictReader(f, skipinitialspace=True)]
         self.is_video_stop = False  # flag in order to check if video stop
         self.disp_height = (
@@ -86,6 +85,10 @@ class App(tk.Frame):
         self.styleTransfer = cam_utils.StyleTransfer(
             self.cam.inp_height, self.cam.inp_width, self.models
         )  # style transfer instance
+        self.start_time = time.time()
+            #time instance for autoplay
+        self.sec = args.num_sec
+            #time unit for style change in autoplay
 
         """ config email service """
         if args.email == True:
@@ -114,6 +117,7 @@ class App(tk.Frame):
 
     # update entire window
     def update_window(self, output=None):
+        
         inp_frame, lab_frame = self.cam.get_frame()
         output = self.styleTransfer.get_output(inp_frame)
         style = self.styleTransfer.get_style()
@@ -134,17 +138,21 @@ class App(tk.Frame):
 
         # load style info in text
         self.text_artist.configure(text=self.styleTransfer.get_style_info())
-
+   
     def video_play(self):
+        start_time = time.time()
         if self.is_video_stop == True:
-            # TODO: don't change style
             self.update_window()
+            self.start_time = start_time
             return
         else:
-            # TODO: change style
+            change_point = start_time - self.start_time
             self.cam.set_frame()
             self.update_window()
-            self.master.after(1, self.video_play)
+            self.master.after(1,self.video_play)
+            if change_point > self.sec:
+                self.styleTransfer.change_style(False)
+                self.start_time = start_time                
 
     def video_stop(self):
         self.is_video_stop = not self.is_video_stop
@@ -168,8 +176,11 @@ class App(tk.Frame):
 
     def change_style(self, is_prev=True):
         self.styleTransfer.change_style(is_prev)
+        self.start_time = time.time()
         if self.is_video_stop == True:
-            self.video_play()
+            self.update_window()
+            if self.btn_print["state"] == tk.NORMAL:
+                self.save()
 
     def capture(self):
         inp_frame, _ = self.cam.get_frame()
@@ -188,8 +199,12 @@ class App(tk.Frame):
         disp_height = self.disp_height
         disp_width = int(self.disp_height * (ow / oh))
 
+        # Draw outline of style image
+        white = [255,255,255]
+        outline = cv2.copyMakeBorder(self.styleTransfer.get_style(),10,10,10,10,cv2.BORDER_CONSTANT,value=white)
+        
         # merge ouput and style
-        style_downscale = imutils.resize(self.styleTransfer.get_style(), width=100, inter=cv2.INTER_AREA)
+        style_downscale = imutils.resize(outline, width=100, inter=cv2.INTER_AREA)
         x_offset = 590
         y_offset = 10
         output[
@@ -197,6 +212,7 @@ class App(tk.Frame):
         ] = style_downscale
 
         # write text
+        fontpath = "/fonts/NanumPen.ttf"
         text = self.text_input.get("1.0", tk.END)
         pr_img = np.zeros((3840, 5120, 3), dtype="uint8") + 255  # resizing
         resized_height = int(3840 * 1)
@@ -205,13 +221,15 @@ class App(tk.Frame):
         img_pil = Image.fromarray(pr_img)
         draw = ImageDraw.Draw(img_pil)
         draw.text(
-            (100, 3550),
-            text,
-            font=ImageFont.truetype(font="/usr/share/fonts/truetype/nanum/NanumPen.ttf", size=250),
-            fill=(255, 255, 255),
+            (120, 3530), text, font=ImageFont.truetype(font=fontpath, size=250), fill=(255, 255, 255),
         )
-        # TODO: write date
-        # today = datetime.now().strftime("%Y-%m-%d")
+
+        # write date with postech sign
+        today = datetime.now().strftime("%Y.%m.%d")
+        text = today + " POSTECH 인공지능연구원"
+        draw.text(
+            (120, 3370), text, font=ImageFont.truetype(font=fontpath, size=180),
+        )
 
         # resizing
         output = np.array(img_pil)
@@ -228,7 +246,9 @@ class App(tk.Frame):
             pass
 
     def print_out(self):
-        os.system("lpr print/print.png")
+        # os.system("/bin/bash -c 'lpr print/print.png'")
+        with open("./scripts/print_out_container.sh", "w") as f:
+            f.write("#!/bin/bash\nlpr ../print/print.png")
 
     # send mail to respected receiver
     def send_email(self):
@@ -240,7 +260,7 @@ class App(tk.Frame):
 
         msg = MIMEMultipart()
         msg["From"] = sender
-        msg["To"] = COMMASPACE.join(receiver)
+        msg["To"] = ', '.join(receiver)
         msg["DATE"] = formatdate(localtime=True)
         msg["Subject"] = title
         # msg.attach(MIMEText())
