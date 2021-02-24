@@ -144,15 +144,17 @@ class App(tk.Frame):
         start_time = time.time()
         if self.is_video_stop == True:
             self.update_window()
+            self.start_time = start_time
             return
         else:
-            change_point = (start_time - self.start_time)%self.sec
+            change_point = start_time - self.start_time
             self.cam.set_frame()
             self.update_window()
             self.master.after(1,self.video_play)
-            if change_point < 0.1:
-                self.styleTransfer.change_style()
-                #automatic style change
+            if change_point > self.sec:
+                self.styleTransfer.change_style(False)
+                self.start_time = start_time                
+
 
     def video_stop(self):
         self.is_video_stop = not self.is_video_stop
@@ -176,10 +178,12 @@ class App(tk.Frame):
 
     def change_style(self, is_prev=True):
         self.styleTransfer.change_style(is_prev)
+        self.start_time = time.time()
         if self.is_video_stop == True:
-            self.video_play()
-            
-            
+            self.update_window()
+            if self.btn_print["state"] == tk.NORMAL:
+                self.save()
+
     def capture(self):
         inp_frame, _ = self.cam.get_frame()
         # e.g. capture_20210129_12'34'56
@@ -197,8 +201,13 @@ class App(tk.Frame):
         disp_height = self.disp_height
         disp_width = int(self.disp_height * (ow / oh))
 
+        # Draw outline of style image
+        white = [255,255,255]
+        outline = cv2.copyMakeBorder(self.styleTransfer.get_style(),10,10,10,10,cv2.BORDER_CONSTANT,value=white)
+        
         # merge ouput and style
-        style_downscale = imutils.resize(self.styleTransfer.get_style(), width=100, inter=cv2.INTER_AREA)
+        #style_downscale = imutils.resize(self.styleTransfer.get_style(), width=100, inter=cv2.INTER_AREA)
+        style_downscale = imutils.resize(outline, width=100, inter=cv2.INTER_AREA)
         x_offset = 590
         y_offset = 10
         output[
@@ -219,13 +228,14 @@ class App(tk.Frame):
             font=ImageFont.truetype(font="/usr/share/fonts/truetype/nanumfont/NanumPen.ttf", size=250),
             fill=(255, 255, 255),
         )
-        
+
         # write date with postech sign
         today = datetime.now().strftime("%Y.%m.%d")
-        text = today + ' POSTECH인공지능연구원'
-        font = ImageFont.truetype('NanumGothicBold.ttf',90)
-        draw.text((100,3430), text, font=font)
-        
+        text = today + " POSTECH 인공지능연구원"
+        font = ImageFont.truetype("NanumPen.ttf", 130)
+        draw.text(
+            (100, 3430), text, font=font,
+        )
 
         # resizing
         output = np.array(img_pil)
