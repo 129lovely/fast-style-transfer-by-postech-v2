@@ -177,9 +177,10 @@ class App(tk.Frame):
     def change_style(self, is_prev=True):
         self.styleTransfer.change_style(is_prev)
         if self.is_video_stop == True:
-            self.video_play()
-            
-            
+            self.update_window()
+            if self.btn_print["state"] == tk.NORMAL:
+                self.save()
+
     def capture(self):
         inp_frame, _ = self.cam.get_frame()
         # e.g. capture_20210129_12'34'56
@@ -219,13 +220,14 @@ class App(tk.Frame):
             font=ImageFont.truetype(font="/usr/share/fonts/truetype/nanumfont/NanumPen.ttf", size=250),
             fill=(255, 255, 255),
         )
-        
+
         # write date with postech sign
         today = datetime.now().strftime("%Y.%m.%d")
-        text = today + ' POSTECH인공지능연구원'
-        font = ImageFont.truetype('NanumGothicBold.ttf',90)
-        draw.text((100,3430), text, font=font)
-        
+        text = today + " POSTECH 인공지능연구원"
+        font = ImageFont.truetype("NanumPen.ttf", 120)
+        draw.text(
+            (100, 3430), text, font=font,
+        )
 
         # resizing
         output = np.array(img_pil)
