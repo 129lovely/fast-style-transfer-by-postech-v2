@@ -206,7 +206,6 @@ class App(tk.Frame):
         outline = cv2.copyMakeBorder(self.styleTransfer.get_style(),10,10,10,10,cv2.BORDER_CONSTANT,value=white)
         
         # merge ouput and style
-        #style_downscale = imutils.resize(self.styleTransfer.get_style(), width=100, inter=cv2.INTER_AREA)
         style_downscale = imutils.resize(outline, width=100, inter=cv2.INTER_AREA)
         x_offset = 590
         y_offset = 10
