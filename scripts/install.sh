@@ -2,6 +2,8 @@
 
 pip install gdown
 
+cd ../
+
 echo -e "EMAIL_ADDRESS=EXAMPLE@gmail.com\nEMAIL_PASSWORD=EXAMPLE" > .env
 
 gdown --id 1FcO79mp9iKZlFnMDW8GORgivrOnN19_5 --output style.zip
