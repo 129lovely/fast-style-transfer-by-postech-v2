@@ -1,5 +1,0 @@
-{
-  "git.ignoreLimitWarning": true,
-  "python.pythonPath": "/home/piai/anaconda3/envs/tfst/bin/python"
-  // "python.linting.pylintArgs": ["--generate-members"]
-}
