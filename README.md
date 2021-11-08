@@ -1,12 +1,12 @@
 # Style transfer manual
 
-1. [Style transfer 환경 설정]()
-    1. [working directory 설정]()
-    2. [docker 환경 설정]()
-2. [Style transfer 실행 및 작동]()
-    1. [프로그램 실행]()
-    2. [작동 방법]()
-3. [부록]()
+1. [Style transfer 환경 설정](#Style-transfer-환경-설정)
+    1. [working directory 설정](#1.-working-directory-설정)
+    2. [docker 환경 설정](#2.-docker-환경-설정)
+2. [Style transfer 실행 및 작동](#프로그램-실행-및-작동)
+    1. [프로그램 실행](#1.-프로그램-실행)
+    2. [작동 방법](#2.-작동-방법)
+3. [부록](#부록)
 
 # Style transfer 환경 설정
 
@@ -81,7 +81,7 @@ $ python3 run_cam.py --models final_model_list.csv
 
 ## 2. 작동 방법
 
-![Style%20transfer%20manual%20543d3ce0f74e4dceadfaac6e0a3ffef7/Untitled.png](Style%20transfer%20manual%20543d3ce0f74e4dceadfaac6e0a3ffef7/Untitled.png)
+![preview.png](preview.png)
 
 1. Style 변경
     - 자동 재생하기 : `--num_sec` (default=10/10초)마다 style 자동 변경
