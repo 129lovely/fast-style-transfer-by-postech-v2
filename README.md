@@ -28,14 +28,11 @@ EMAIL_ADDRESS=EXAMPLE@gmail.com
 EMAIL_PASSWORD=EXAMPLE
 ```
 
-<aside>
 ⛔ 주의사항
 - gmail 계정만 사용 가능
 - `.env` 파일 내에 띄어쓰기, 큰 따옴표 사용 금지
 - 파일 수정 이후 관리자 계정 보안 설정 변경
 ([구글 계정관리](https://myaccount.google.com/) → [보안](https://myaccount.google.com/security) → 제 3자 액세스 → 보안 수준이 낮은 앱의 액세스 `사용`으로 변경)
-
-</aside>
 
 ## 2. docker 환경 설정
 
@@ -99,14 +96,11 @@ $ python3 run_cam.py --models final_model_list.csv
 - Capture  : 누른 동시에 📁capture 에 저장됨 (단,  Save  와 달리 문구 및 캡션 등이 없는 사진 저장)
 - ⏸️ &  Save  누른 상태에서도 ◀ , ▶ 이용하여 style 변경 가능(즉, 사진 찍은 후 멈춤 상태에서 style 고를 수 있음
 
-<aside>
 ⛔ 주의사항
 - email 전송 후 success 팝업 창 뜰때까지 대기하기
 - Style transfer 종료 시 타이틀바의 ✖️ 버튼 눌러서 종료하기(terminal창 강제 종료 시 error 발생 가능)
 - 실행 도중 USB포트에서 CAM빼지 않기(만약 이후 재실행 시 캠 인식을 못한다면 USB 재연결해보기)
 - Print 한 사진은 ./print에 임시저장 후 자동삭제되므로 파일 소장 원하면 이메일 기능 사용
-
-</aside>
 
 # 부록
 
