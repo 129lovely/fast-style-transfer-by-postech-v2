@@ -1,11 +1,11 @@
 # Style transfer manual
 
 1. [Style transfer 환경 설정](#Style-transfer-환경-설정)
-    1. [working directory 설정](#1.-working-directory-설정)
-    2. [docker 환경 설정](#2.-docker-환경-설정)
+    1. [working directory 설정](#1-working-directory-설정)
+    2. [docker 환경 설정](#2-docker-환경-설정)
 2. [Style transfer 실행 및 작동](#프로그램-실행-및-작동)
-    1. [프로그램 실행](#1.-프로그램-실행)
-    2. [작동 방법](#2.-작동-방법)
+    1. [프로그램 실행](#1-프로그램-실행)
+    2. [작동 방법](#2-작동-방법)
 3. [부록](#부록)
 
 # Style transfer 환경 설정
